@@ -1,0 +1,68 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import { Maximize2, Sparkles } from 'lucide-astro';
+import { Image } from 'astro:assets';
+
+// Placeholder array of images of various heights for the masonry layout
+const images = [
+  { url: "https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?auto=format&fit=crop&q=80&w=600", height: "h-80" },
+  { url: "https://images.unsplash.com/photo-1611558709798-e009c8fd7706?auto=format&fit=crop&q=80&w=600", height: "h-96" },
+  { url: "https://images.unsplash.com/photo-1550537687-c91072c4792d?auto=format&fit=crop&q=80&w=600", height: "h-64" },
+  { url: "https://images.unsplash.com/photo-1562962230-16e4623d36e6?auto=format&fit=crop&q=80&w=600", height: "h-[26rem]" },
+  { url: "https://images.unsplash.com/photo-1542157585-ef20bfcce579?auto=format&fit=crop&q=80&w=600", height: "h-72" },
+  { url: "https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?auto=format&fit=crop&q=80&w=600", height: "h-[22rem]" },
+  { url: "https://images.unsplash.com/photo-1611558709798-e009c8fd7706?auto=format&fit=crop&q=80&w=600", height: "h-80" },
+  { url: "https://images.unsplash.com/photo-1550537687-c91072c4792d?auto=format&fit=crop&q=80&w=600", height: "h-64" },
+];
+---
+
+<MainLayout title="Portafolio | BarrientosINK">
+  <div class="py-12 md:py-20 text-center max-w-3xl mx-auto mb-12">
+    <div class="inline-flex items-center justify-center space-x-2 text-amber-500 mb-4 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+      <Sparkles class="w-4 h-4" />
+      <span class="text-sm font-semibold tracking-widest uppercase">Galería Exclusiva</span>
+    </div>
+    <h1 class="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-white">
+      Nuestro <span class="text-amber-500">Portafolio</span>
+    </h1>
+    <p class="text-zinc-400 text-lg">
+      Explora nuestras últimas piezas. Realismo fino, autoría y perfección en cada trazo.
+    </p>
+  </div>
+
+  <!-- Masonry Grid -->
+  <div class="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6 pb-20">
+    {images.map((image, i) => (
+      <div class={`relative group overflow-hidden rounded-xl bg-zinc-900 border border-white/5 break-inside-avoid ${image.height}`}>
+        
+        <Image 
+          src={image.url} 
+          alt={`BarrientosINK Tattoo ${i + 1}`} 
+          width={600}
+          height={800}
+          format="webp"
+          class="w-full h-full object-cover transition duration-1000 group-hover:scale-110 group-hover:saturate-50"
+          loading={i < 4 ? "eager" : "lazy"}
+        />
+
+        <!-- Gold Dust / Sparkle Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
+          
+          <!-- Inner Gold Glow Border Effect -->
+          <div class="absolute inset-2 border border-amber-500/0 group-hover:border-amber-500/50 rounded-lg transition-colors duration-700 shadow-[inset_0_0_20px_rgba(245,158,11,0)] group-hover:shadow-[inset_0_0_20px_rgba(245,158,11,0.3)]"></div>
+
+          <div class="relative z-10 translate-y-4 group-hover:translate-y-0 transition-transform duration-500 flex justify-between items-end">
+            <div>
+              <p class="text-amber-500 font-bold tracking-widest text-sm mb-1 uppercase">Pieza {i + 1}</p>
+              <p class="text-white text-sm opacity-80">Realismo Fino</p>
+            </div>
+            <button class="bg-amber-500 text-zinc-950 p-2.5 rounded-full hover:bg-white hover:text-zinc-950 transition-colors shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+              <Maximize2 class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+      </div>
+    ))}
+  </div>
+</MainLayout>

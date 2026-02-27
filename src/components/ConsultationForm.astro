@@ -1,0 +1,51 @@
+---
+// Placeholder for ConsultationForm component
+---
+
+<div class="space-y-4">
+    <div class="text-center mb-6">
+        <h3 class="text-xl font-bold text-white tracking-tighter">
+            Solicitar Consulta
+        </h3>
+        <p class="text-zinc-400 text-sm mt-1">
+            Déjanos tus datos y nos pondremos en contacto.
+        </p>
+    </div>
+    <form class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-zinc-300 mb-1"
+                >Nombre</label
+            >
+            <input
+                type="text"
+                class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-amber-500/50 transition-colors"
+                placeholder="Tu nombre"
+            />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-zinc-300 mb-1"
+                >Email</label
+            >
+            <input
+                type="email"
+                class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-amber-500/50 transition-colors"
+                placeholder="tu@email.com"
+            />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-zinc-300 mb-1"
+                >Idea del Tatuaje</label
+            >
+            <textarea
+                rows="3"
+                class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-amber-500/50 transition-colors resize-none"
+                placeholder="Describe tu idea..."></textarea>
+        </div>
+        <button
+            type="submit"
+            class="w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold py-3 px-4 rounded-lg transition-colors mt-2"
+        >
+            Enviar Solicitud
+        </button>
+    </form>
+</div>

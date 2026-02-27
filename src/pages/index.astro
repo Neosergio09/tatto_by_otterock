@@ -1,0 +1,103 @@
+---
+import MainLayout from "../layouts/MainLayout.astro";
+import ConsultationForm from "../components/ConsultationForm.astro";
+import { PenTool, ShieldCheck, Sparkles } from "lucide-astro";
+---
+
+<MainLayout title="BarrientosINK | Estudio de Diseño Privado">
+	<div
+		class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20 mt-12 md:mt-24 mb-20"
+	>
+		<!-- Hero Content -->
+		<div class="flex-1 text-center lg:text-left">
+			<h1
+				class="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter mb-6 text-white leading-tight"
+			>
+				BarrientosINK: <br class="hidden lg:block" />
+				<span class="text-amber-500"
+					>Donde el Arte se Funde con la Piel.</span
+				>
+			</h1>
+			<p
+				class="text-zinc-400 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0"
+			>
+				Estudio de diseño privado especializado en piezas de autor y
+				realismo fino. Tu historia merece ser inmortalizada con
+				precisión y elegancia.
+			</p>
+		</div>
+
+		<!-- Form Container with Gold Glow -->
+		<div class="w-full max-w-md lg:w-[400px] relative group shrink-0">
+			<!-- Glow Effect -->
+			<div
+				class="absolute -inset-1 bg-gradient-to-r from-amber-500 to-amber-700 rounded-2xl blur opacity-25 group-hover:opacity-45 transition duration-1000 group-hover:duration-200"
+			>
+			</div>
+
+			<!-- Form Content -->
+			<div
+				class="relative bg-zinc-950 p-6 sm:p-8 rounded-xl border border-white/5 shadow-2xl"
+			>
+				<ConsultationForm />
+			</div>
+		</div>
+	</div>
+
+	<!-- Value Props Grid -->
+	<div
+		class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 border-t border-white/5 pt-16 mt-16"
+	>
+		<!-- Item 1 -->
+		<div
+			class="bg-zinc-900/40 p-8 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-colors"
+		>
+			<div
+				class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center mb-6 text-amber-500"
+			>
+				<PenTool class="w-6 h-6" />
+			</div>
+			<h3 class="text-xl font-bold tracking-tighter text-white mb-3">
+				Diseño Único
+			</h3>
+			<p class="text-zinc-400 leading-relaxed text-sm lg:text-base">
+				No replicamos. Creamos piezas exclusivas para cada lienzo
+				humano.
+			</p>
+		</div>
+
+		<!-- Item 2 -->
+		<div
+			class="bg-zinc-900/40 p-8 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-colors"
+		>
+			<div
+				class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center mb-6 text-amber-500"
+			>
+				<ShieldCheck class="w-6 h-6" />
+			</div>
+			<h3 class="text-xl font-bold tracking-tighter text-white mb-3">
+				Higiene Médica
+			</h3>
+			<p class="text-zinc-400 leading-relaxed text-sm lg:text-base">
+				Estándares quirúrgicos para tu total tranquilidad.
+			</p>
+		</div>
+
+		<!-- Item 3 -->
+		<div
+			class="bg-zinc-900/40 p-8 rounded-2xl border border-white/5 hover:border-amber-500/30 transition-colors"
+		>
+			<div
+				class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center mb-6 text-amber-500"
+			>
+				<Sparkles class="w-6 h-6" />
+			</div>
+			<h3 class="text-xl font-bold tracking-tighter text-white mb-3">
+				Asesoría IA
+			</h3>
+			<p class="text-zinc-400 leading-relaxed text-sm lg:text-base">
+				Visualiza y cotiza tu idea con nuestra tecnología de vanguardia.
+			</p>
+		</div>
+	</div>
+</MainLayout>

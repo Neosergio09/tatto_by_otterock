@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@layer base {
+    @font-face {
+        font-family: 'system-ui';
+        font-display: swap;
+    }
+}
