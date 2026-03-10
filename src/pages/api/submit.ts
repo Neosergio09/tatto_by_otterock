@@ -3,9 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
+const supabaseKey = process.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+export const OPTIONS: APIRoute = async () => {
+  return new Response(
+    JSON.stringify({ message: 'CORS check successful' }),
+    { 
+      status: 200, 
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      } 
+    }
+  );
+};
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -17,6 +32,12 @@ export const POST: APIRoute = async ({ request }) => {
     let formData;
     try {
       formData = await request.formData();
+      
+      const payloadLog = Object.fromEntries(formData.entries());
+      // Don't print the whole image binary data:
+      if (payloadLog.image) payloadLog.image = '[FILE]';
+      console.log("Payload recibido:", payloadLog);
+
     } catch (err) {
       console.error("Content-Type Error, Headers:", Object.fromEntries(request.headers));
       return new Response(
@@ -57,7 +78,7 @@ export const POST: APIRoute = async ({ request }) => {
 
         if (uploadError) {
           console.error("Supabase Storage Error:", uploadError);
-          throw new Error(`Error subiendo la imagen al bucket 'tattoo-references': ${uploadError.message}`);
+          // Let it proceed without throwing so the rest of the form still saves.
         }
 
         if (uploadData) {
@@ -68,8 +89,7 @@ export const POST: APIRoute = async ({ request }) => {
         }
       } catch (storageErr) {
         console.error("Storage Exception:", storageErr);
-        // We log it but might still try to save the consultation data without the image (or throw here to short-circuit)
-        throw storageErr;
+        // We log it but proceed to save the consultation data without the image to avoid crashing
       }
     }
 
