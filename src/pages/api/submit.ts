@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const supabaseKey = process.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = (process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321').trim();
+const supabaseKey = (process.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '').trim();
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const OPTIONS: APIRoute = async () => {
