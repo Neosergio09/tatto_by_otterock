@@ -1,0 +1,468 @@
+---
+// src/components/GenerativeLifeform.astro
+---
+
+<canvas
+    id="cosmic-cursor"
+    class="fixed inset-0 pointer-events-none z-[9999] opacity-90 block max-w-[100vw]"></canvas>
+
+<script>
+    // @ts-nocheck
+    class Point {
+        x = 0;
+        y = 0;
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    const canvas = document.getElementById("cosmic-cursor");
+    if (canvas) {
+        const ctx = canvas.getContext("2d");
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        // Target for the head to follow
+        const target = new Point(width / 2, height / 2);
+        const rawMouse = new Point(width / 2, height / 2);
+        let cursorVisible = false;
+
+        let isPatrolling = false;
+        let patrolRect = null;
+        let patrolProgress = 0;
+        const patrolSpeed = 4;
+        let glowIntensity = 1;
+
+        function getClosestProgress(rect, x, y) {
+            const pad = 10;
+            const w = rect.width + pad * 2;
+            const h = rect.height + pad * 2;
+            const left = rect.left - pad;
+            const top = rect.top - pad;
+            const right = left + w;
+            const bottom = top + h;
+            
+            const distTop = Math.abs(y - top);
+            const distRight = Math.abs(x - right);
+            const distBottom = Math.abs(y - bottom);
+            const distLeft = Math.abs(x - left);
+            
+            const minDist = Math.min(distTop, distRight, distBottom, distLeft);
+            
+            let px = Math.max(left, Math.min(x, right));
+            let py = Math.max(top, Math.min(y, bottom));
+
+            if (minDist === distTop) return px - left;
+            if (minDist === distRight) return w + (py - top);
+            if (minDist === distBottom) return w + h + (right - px);
+            return w * 2 + h + (bottom - py);
+        }
+
+        function getPerimeterPoint(rect, progress) {
+            const pad = 10;
+            const w = rect.width + pad * 2;
+            const h = rect.height + pad * 2;
+            const perimeter = w * 2 + h * 2;
+            const p = ((progress % perimeter) + perimeter) % perimeter;
+            
+            const left = rect.left - pad;
+            const top = rect.top - pad;
+            
+            if (p < w) return { x: left + p, y: top };
+            if (p < w + h) return { x: left + w, y: top + (p - w) };
+            if (p < w * 2 + h) return { x: left + w - (p - (w + h)), y: top + h };
+            return { x: left, y: top + h - (p - (w * 2 + h)) };
+        }
+
+        const setupPatrol = () => {
+            const trigger = document.getElementById("patrol-trigger");
+            const targetEl = document.getElementById("patrol-target");
+            if (trigger && targetEl) {
+                trigger.addEventListener("mouseenter", () => {
+                    isPatrolling = true;
+                    patrolRect = targetEl.getBoundingClientRect();
+                    patrolProgress = getClosestProgress(patrolRect, rawMouse.x, rawMouse.y);
+                });
+                trigger.addEventListener("mouseleave", () => {
+                    isPatrolling = false;
+                });
+            }
+        };
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", setupPatrol);
+        } else {
+            setTimeout(setupPatrol, 100);
+            setTimeout(setupPatrol, 1000); // Retry logic
+        }
+
+        window.addEventListener("mousemove", (e) => {
+            rawMouse.x = e.clientX;
+            rawMouse.y = e.clientY;
+            cursorVisible = true;
+        });
+
+        window.addEventListener("touchmove", (e) => {
+            if (e.touches.length > 0) {
+                rawMouse.x = e.touches[0].clientX;
+                rawMouse.y = e.touches[0].clientY;
+                cursorVisible = true;
+            }
+        }, { passive: true });
+
+        window.addEventListener("mouseout", () => {
+            cursorVisible = false;
+        });
+
+        // Settings - 12 Legs means 6 pairs. Spine should be long enough to fit 6 pairs.
+        const spineLength = 15;
+        const segmentLength = 22; // Distance between diamonds
+        const standDist = 30; // How far out to the side
+        const forwardOffset = 10; // Reach slightly forward
+        const L1 = 18; // Upper leg length
+        const L2 = 22; // Lower leg length
+
+        let headVx = 0;
+        let headVy = 0;
+        const headSpring = 0.08;
+        const headFriction = 0.75;
+
+        /** @type {Point[]} */
+        const spine = [];
+        for (let i = 0; i < spineLength; i++) {
+            spine.push(new Point(width / 2, height / 2));
+        }
+
+        function dist(p1, p2) {
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function angle(p1, p2) {
+            return Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        }
+
+        function resolveIK() {
+            if (isPatrolling) {
+                const targetEl = document.getElementById("patrol-target");
+                if (targetEl) patrolRect = targetEl.getBoundingClientRect();
+
+                patrolProgress += patrolSpeed;
+                const pt = getPerimeterPoint(patrolRect, patrolProgress);
+                target.x = pt.x;
+                target.y = pt.y;
+                glowIntensity += (2.5 - glowIntensity) * 0.1;
+            } else {
+                target.x = rawMouse.x;
+                target.y = rawMouse.y;
+                glowIntensity += (1.0 - glowIntensity) * 0.1;
+            }
+
+            // Head follows target smoothly with spring-damping and 50px offset
+            if (cursorVisible || isPatrolling) {
+                const dx = target.x - spine[0].x;
+                const dy = target.y - spine[0].y;
+                const distToTarget = Math.sqrt(dx * dx + dy * dy);
+                
+                let actualTargetX = target.x;
+                let actualTargetY = target.y;
+
+                if (distToTarget > 0.1) {
+                    const desiredDist = 50; 
+                    actualTargetX = target.x - (dx / distToTarget) * desiredDist;
+                    actualTargetY = target.y - (dy / distToTarget) * desiredDist;
+                }
+
+                // Spring-damping formula
+                const ax = (actualTargetX - spine[0].x) * headSpring;
+                const ay = (actualTargetY - spine[0].y) * headSpring;
+                
+                headVx += ax;
+                headVy += ay;
+                
+                headVx *= headFriction;
+                headVy *= headFriction;
+
+                // Flicker fix: epsilon dead-zone
+                if (Math.abs(headVx) < 0.1) headVx = 0;
+                if (Math.abs(headVy) < 0.1) headVy = 0;
+
+                spine[0].x += headVx;
+                spine[0].y += headVy;
+            } else {
+                // drift slightly
+                spine[0].x += Math.sin(Date.now() * 0.001) * 0.5;
+                spine[0].y += Math.cos(Date.now() * 0.002) * 0.5;
+                headVx = 0;
+                headVy = 0;
+            }
+
+            for (let i = 1; i < spine.length; i++) {
+                const current = spine[i];
+                const prev = spine[i - 1];
+                let a = angle(current, prev);
+                
+                // Pull 'current' towards 'prev' maintaining 'segmentLength'
+                current.x = prev.x - Math.cos(a) * segmentLength;
+                current.y = prev.y - Math.sin(a) * segmentLength;
+            }
+        }
+
+        // 6 attach points for 12 legs
+        const legAttachNodes = [2, 4, 6, 8, 10, 12];
+
+        class Leg {
+            attachIndex = 0;
+            side = 1;
+            foot = new Point(0, 0);
+            targetFoot = new Point(0, 0);
+            stepping = false;
+            stepProgress = 0;
+            oldFoot = new Point(0, 0);
+
+            constructor(attachIndex, side) {
+                this.attachIndex = attachIndex;
+                this.side = side;
+                this.foot = new Point(width / 2, height / 2);
+                this.targetFoot = new Point(width / 2, height / 2);
+                this.stepping = false;
+                this.stepProgress = 0;
+                this.oldFoot = new Point(width / 2, height / 2);
+            }
+
+            update(globalHeading) {
+                const attachPoint = spine[this.attachIndex];
+
+                let localAngle = globalHeading;
+                if (this.attachIndex < spine.length - 1) {
+                    localAngle = angle(
+                        spine[this.attachIndex + 1],
+                        spine[this.attachIndex]
+                    );
+                }
+
+                const perpAngle = localAngle + (Math.PI / 2) * this.side;
+
+                this.targetFoot.x =
+                    attachPoint.x +
+                    Math.cos(perpAngle) * standDist +
+                    Math.cos(localAngle) * forwardOffset;
+                this.targetFoot.y =
+                    attachPoint.y +
+                    Math.sin(perpAngle) * standDist +
+                    Math.sin(localAngle) * forwardOffset;
+
+                // Step logic - alternating thresholds for smoother leg phase sync during tight turns
+                const d = dist(this.foot, this.targetFoot);
+                const stepThreshold = 40 + (this.attachIndex % 4) * 4 + (this.side === 1 ? 0 : 5);
+                
+                if (d > stepThreshold && !this.stepping) {
+                    this.stepping = true;
+                    this.stepProgress = 0;
+                    this.oldFoot.x = this.foot.x;
+                    this.oldFoot.y = this.foot.y;
+                }
+
+                if (this.stepping) {
+                    this.stepProgress += 0.15;
+                    if (this.stepProgress >= 1) {
+                        this.stepProgress = 1;
+                        this.stepping = false;
+                    }
+
+                    // Ease in-out function for a snappier, organic step
+                    const t = this.stepProgress;
+                    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+                    // Calculate linear progress
+                    const midX = this.oldFoot.x + (this.targetFoot.x - this.oldFoot.x) * ease;
+                    const midY = this.oldFoot.y + (this.targetFoot.y - this.oldFoot.y) * ease;
+
+                    // Pull foot inwards to simulate lifting off the surface
+                    const lift = Math.sin(t * Math.PI) * 12;
+                    const pullAngle = angle({x: midX, y: midY}, attachPoint);
+
+                    this.foot.x = midX + Math.cos(pullAngle) * lift;
+                    this.foot.y = midY + Math.sin(pullAngle) * lift;
+                }
+            }
+
+            draw() {
+                if (!ctx) return;
+                const attachPoint = spine[this.attachIndex];
+
+                const d = dist(attachPoint, this.foot);
+
+                let kneeX, kneeY;
+
+                if (d >= L1 + L2 || d < 0.1) {
+                    // Fully stretched
+                    const a = angle(attachPoint, this.foot);
+                    kneeX = attachPoint.x + Math.cos(a) * L1;
+                    kneeY = attachPoint.y + Math.sin(a) * L1;
+                } else {
+                    // Inverse Kinematics for a 2-segment leg
+                    let cosAngle = (L1 * L1 + d * d - L2 * L2) / (2 * L1 * d);
+                    cosAngle = Math.max(-1, Math.min(1, cosAngle)); // Clamp
+                    const theta = Math.acos(cosAngle);
+                    
+                    const baseAngle = angle(attachPoint, this.foot);
+                    
+                    // Bend direction depends on the side
+                    const kneeDir = this.side; 
+                    const kneeAngle = baseAngle - (kneeDir * theta);
+
+                    kneeX = attachPoint.x + Math.cos(kneeAngle) * L1;
+                    kneeY = attachPoint.y + Math.sin(kneeAngle) * L1;
+                }
+
+                // Draw articulated arthropod leg
+                ctx.beginPath();
+                ctx.moveTo(attachPoint.x, attachPoint.y);
+                ctx.lineTo(kneeX, kneeY);
+                ctx.lineTo(this.foot.x, this.foot.y);
+                
+                ctx.strokeStyle = "#f59e0b"; // amber-500
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = "round";
+                ctx.lineCap = "round";
+                ctx.stroke();
+
+                // Draw tiny foot paw
+                ctx.beginPath();
+                ctx.arc(this.foot.x, this.foot.y, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = "#f59e0b";
+                ctx.fill();
+            }
+        }
+
+        /** @type {Leg[]} */
+        const legs = [];
+        legAttachNodes.forEach((index) => {
+            legs.push(new Leg(index, 1)); // Right
+            legs.push(new Leg(index, -1)); // Left
+        });
+
+        // Reuse variables in draw loop to avoid garbage collection overhead
+        let extraGlow, current, a, r, i, hornL, drawHeadHeading;
+
+        // Loop
+        function draw() {
+            if (!ctx) return;
+
+            ctx.clearRect(0, 0, width, height);
+            resolveIK();
+
+            drawHeadHeading = angle(spine[1], spine[0]);
+
+            // Dynamically intensify glow based on patrol status
+            extraGlow = glowIntensity - 1;
+            ctx.shadowColor = `rgba(245, 158, 11, ${0.4 + extraGlow * 0.4})`;
+            ctx.shadowBlur = 8 + extraGlow * 15;
+
+            // Update and draw legs
+            for(i = 0; i < legs.length; i++) {
+                legs[i].update(drawHeadHeading);
+                legs[i].draw();
+            }
+
+            // Draw spine segments as tribal diamonds
+            for (i = 0; i < spine.length; i++) {
+                current = spine[i];
+                a = i < spine.length - 1 ? angle(spine[i+1], current) : drawHeadHeading;
+                r = Math.max(2, 12 - (i / spine.length) * 6); // radius for diamond/horns
+
+                ctx.save();
+                ctx.translate(current.x, current.y);
+                ctx.rotate(a);
+
+                if (i === spine.length - 1) {
+                    // Tail spiral
+                    ctx.beginPath();
+                    ctx.arc(-8, 0, 8, 0, Math.PI + Math.PI/2);
+                    ctx.strokeStyle = "#f59e0b";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // inner tail dot
+                    ctx.beginPath();
+                    ctx.arc(-8, -4, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = "#f59e0b";
+                    ctx.fill();
+
+                } else {
+                    // Body Diamond
+                    
+                    ctx.beginPath();
+                    // Draw a diamond (rotated square)
+                    ctx.moveTo(0, r);
+                    ctx.lineTo(r, 0);
+                    ctx.lineTo(0, -r);
+                    ctx.lineTo(-r, 0);
+                    ctx.closePath();
+                    
+                    ctx.fillStyle = "#09090b"; // zinc-950 core
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = "#f59e0b"; // amber border
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+
+                    // Gold center dot
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = "#f59e0b";
+                    ctx.fill();
+                }
+                
+                // If head, draw Horns
+                if (i === 0) {
+                    hornL = 14;
+                    
+                    // Right Horn
+                    ctx.beginPath();
+                    ctx.moveTo(r, 0); 
+                    ctx.lineTo(r + hornL*0.7, hornL*0.7);
+                    ctx.stroke();
+
+                    // Left Horn
+                    ctx.beginPath();
+                    ctx.moveTo(r, 0);
+                    ctx.lineTo(r + hornL*0.7, -hornL*0.7);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // initialize local foot positions instantly
+        const initialHeading = angle(spine[1], spine[0]) || 0;
+        legs.forEach((leg) => {
+            const attach = spine[leg.attachIndex];
+            const perp = initialHeading + (Math.PI / 2) * leg.side;
+            leg.foot.x = attach.x + Math.cos(perp) * 30;
+            leg.foot.y = attach.y + Math.sin(perp) * 30;
+            leg.oldFoot.x = leg.foot.x;
+            leg.oldFoot.y = leg.foot.y;
+            leg.targetFoot.x = leg.foot.x;
+            leg.targetFoot.y = leg.foot.y;
+        });
+
+        draw();
+    }
+</script>

@@ -20,11 +20,14 @@ const artists = [
     imageUrl: "https://images.unsplash.com/photo-1550537687-c91072c4792d?auto=format&fit=crop&q=80&w=800",
   }
 ];
+
+// SVG URL encoded for a basic Baroque Curls/Damask pattern border
+const baroqueDamaskSVG = `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2v2H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4v16h2V24h-2zm4 0v16h2V24h-2zm4 0v16h2V24h-2zm4 0v16h2V24h-2z' fill='%23f59e0b' fill-opacity='0.15' fill-rule='evenodd'/%3E%3C/svg%3E")`;
 ---
 
 <MainLayout title="Artistas | BarrientosINK">
   <div class="py-12 md:py-20 text-center max-w-3xl mx-auto mb-12">
-    <h1 class="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-white">
+    <h1 class="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-zinc-100">
       Nuestros <span class="text-amber-500">Artistas</span>
     </h1>
     <p class="text-zinc-400 text-lg">
@@ -34,33 +37,97 @@ const artists = [
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
     {artists.map((artist) => (
-      <div class="flex flex-col group">
-        <!-- Filigree Frame (Double border with amber accent) -->
-        <div class="p-2 border-[6px] border-double border-amber-500/50 rounded-lg bg-zinc-950 shadow-2xl transition duration-500 group-hover:border-amber-500/80">
-          <div class="overflow-hidden bg-zinc-900 rounded aspect-[3/4] relative">
-            <Image 
-              src={artist.imageUrl} 
-              alt={artist.name}
-              width={800}
-              height={1066}
-              format="webp"
-              loading="lazy" 
-              class="w-full h-full object-cover grayscale opacity-80 transition duration-700 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100"
-            />
+      <div class="flex flex-col group relative">
+        
+        <!-- Baroque Filigree Container -->
+        <div class="relative p-3 bg-zinc-950/80 rounded border-[1px] border-amber-900/30 overflow-hidden shadow-2xl transition-all duration-700 ease-in-out group-hover:border-amber-400/80 group-hover:shadow-[0_0_50px_-15px_rgba(245,158,11,0.4)]">
+          
+          <!-- Decorative repeating pattern layer -->
+          <div 
+            class="absolute inset-0 opacity-40 transition-opacity duration-700 group-hover:opacity-100" 
+            style={`background-image: ${baroqueDamaskSVG}; mix-blend-mode: overlay; pointer-events: none;`}
+          ></div>
+
+          <!-- Filigree Frame Layer -->
+          <div class="relative z-10 p-3 pt-4 pb-4">
+            
+            <!-- Thin Golden Border with Custom Filigree Corners -->
+            <div class="absolute inset-0 border border-amber-600/40 opacity-70 transition-colors duration-500 group-hover:border-amber-400/80 group-hover:opacity-100 m-1 pointer-events-none z-20">
+              
+              <!-- Top Left Filigree Corner -->
+              <svg class="absolute -top-[5px] -left-[5px] w-14 h-14 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-500 group-hover:scale-110" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 5,95 V 30 C 5,16 16,5 30,5 H 95" stroke-width="1.5"/>
+                <path d="M 15,75 V 30 C 15,22 22,15 30,15 H 75" stroke-width="1" opacity="0.6"/>
+                <path d="M 5,45 C 20,45 25,30 25,15" stroke-width="1"/>
+                <path d="M 45,5 C 45,20 30,25 15,25" stroke-width="1"/>
+                <circle cx="30" cy="30" r="3" fill="currentColor" stroke="none"/>
+                <circle cx="45" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="15" cy="45" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+
+              <!-- Top Right Filigree Corner -->
+              <svg class="absolute -top-[5px] -right-[5px] w-14 h-14 text-amber-500 rotate-90 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-500 group-hover:scale-110" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 5,95 V 30 C 5,16 16,5 30,5 H 95" stroke-width="1.5"/>
+                <path d="M 15,75 V 30 C 15,22 22,15 30,15 H 75" stroke-width="1" opacity="0.6"/>
+                <path d="M 5,45 C 20,45 25,30 25,15" stroke-width="1"/>
+                <path d="M 45,5 C 45,20 30,25 15,25" stroke-width="1"/>
+                <circle cx="30" cy="30" r="3" fill="currentColor" stroke="none"/>
+                <circle cx="45" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="15" cy="45" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+
+              <!-- Bottom Right Filigree Corner -->
+              <svg class="absolute -bottom-[5px] -right-[5px] w-14 h-14 text-amber-500 rotate-180 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-500 group-hover:scale-110" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 5,95 V 30 C 5,16 16,5 30,5 H 95" stroke-width="1.5"/>
+                <path d="M 15,75 V 30 C 15,22 22,15 30,15 H 75" stroke-width="1" opacity="0.6"/>
+                <path d="M 5,45 C 20,45 25,30 25,15" stroke-width="1"/>
+                <path d="M 45,5 C 45,20 30,25 15,25" stroke-width="1"/>
+                <circle cx="30" cy="30" r="3" fill="currentColor" stroke="none"/>
+                <circle cx="45" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="15" cy="45" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+
+              <!-- Bottom Left Filigree Corner -->
+              <svg class="absolute -bottom-[5px] -left-[5px] w-14 h-14 text-amber-500 -rotate-90 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-500 group-hover:scale-110" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M 5,95 V 30 C 5,16 16,5 30,5 H 95" stroke-width="1.5"/>
+                <path d="M 15,75 V 30 C 15,22 22,15 30,15 H 75" stroke-width="1" opacity="0.6"/>
+                <path d="M 5,45 C 20,45 25,30 25,15" stroke-width="1"/>
+                <path d="M 45,5 C 45,20 30,25 15,25" stroke-width="1"/>
+                <circle cx="30" cy="30" r="3" fill="currentColor" stroke="none"/>
+                <circle cx="45" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="15" cy="45" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+
+            <!-- Artist Photography -->
+            <div class="overflow-hidden bg-zinc-900 aspect-[3/4] relative rounded-sm shadow-inner z-10 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+              <div class="absolute inset-0 bg-blend-multiply bg-zinc-900/40 z-10 transition-colors duration-500 group-hover:bg-transparent pointer-events-none"></div>
+              <!-- Inner golden shadow cast over photo -->
+              <div class="absolute inset-0 shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] z-10 pointer-events-none"></div>
+              <Image 
+                src={artist.imageUrl} 
+                alt={artist.name}
+                width={800}
+                height={1066}
+                format="webp"
+                loading="lazy" 
+                class="w-full h-full object-cover grayscale opacity-80 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:grayscale-[0.2] group-hover:scale-[1.03] group-hover:opacity-100"
+              />
+            </div>
           </div>
         </div>
         
         <!-- Artist Info -->
-        <div class="mt-6 text-center space-y-2">
-          <h2 class="text-2xl font-bold text-white tracking-widest">{artist.name}</h2>
+        <div class="mt-8 text-center space-y-2 relative z-20">
+          <h2 class="text-2xl font-bold text-zinc-100 tracking-widest uppercase">{artist.name}</h2>
           <div class="flex items-center justify-center space-x-2 text-amber-500">
             <Star class="w-4 h-4" />
             <p class="text-sm font-medium uppercase tracking-widest">{artist.specialty}</p>
             <Star class="w-4 h-4" />
           </div>
-          <button class="mt-4 flex items-center justify-center space-x-2 w-full max-w-[200px] mx-auto py-2 px-4 border border-zinc-800 rounded-lg hover:border-amber-500 hover:text-amber-500 text-zinc-400 transition-colors">
+          <button class="mt-5 flex items-center justify-center space-x-2 w-full max-w-[200px] mx-auto py-2.5 px-4 bg-zinc-900/50 border border-amber-500/20 rounded hover:border-amber-500 hover:text-amber-400 text-zinc-400 transition-all duration-300 hover:shadow-[0_0_20px_-5px_rgba(245,158,11,0.3)] hover:-translate-y-0.5">
             <Instagram class="w-4 h-4" />
-            <span class="text-sm font-medium">Ver Portafolio</span>
+            <span class="text-sm font-medium uppercase tracking-wider">Ver Portafolio</span>
           </button>
         </div>
       </div>

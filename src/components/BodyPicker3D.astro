@@ -1,0 +1,272 @@
+---
+// src/components/BodyPicker3D.astro
+---
+<div class="mb-5">
+  <label class="block text-sm font-medium text-amber-200/80 mb-2 ml-1">
+    Selecciona la Zona del Cuerpo (3D)
+  </label>
+  <div id="body-picker-container" class="relative w-full h-[300px] bg-zinc-950/80 border border-zinc-800 rounded-lg overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
+    <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center text-amber-500/80 text-sm animate-pulse">
+      Cargando modelo 3D...
+    </div>
+    <div class="absolute top-3 left-3 flex gap-2">
+      <div class="w-3 h-3 rounded-full bg-red-500/20"></div>
+      <div class="w-3 h-3 rounded-full bg-amber-500/20"></div>
+      <div class="w-3 h-3 rounded-full bg-green-500/20"></div>
+    </div>
+    <div class="absolute bottom-3 right-3 text-xs text-zinc-500/50 pointer-events-none">
+      Arrastra para rotar
+    </div>
+    <canvas id="body-picker-canvas" class="w-full h-full opacity-0 transition-opacity duration-1000"></canvas>
+  </div>
+</div>
+
+<script>
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+  const container = document.getElementById('body-picker-container');
+  const canvas = document.getElementById('body-picker-canvas') as HTMLCanvasElement;
+  const loadingIndicator = document.getElementById('loading-indicator');
+
+  if (container && canvas) {
+    // Basic Scene Setup
+    const scene = new THREE.Scene();
+    scene.background = null; // transparent
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(0, 0, 9);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+    
+    // Key Light (warm)
+    const keyLight = new THREE.DirectionalLight(0xffedd5, 1);
+    keyLight.position.set(5, 5, 5);
+    scene.add(keyLight);
+
+    // Fill Light (cool)
+    const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.5);
+    fillLight.position.set(-5, 0, 5);
+    scene.add(fillLight);
+    
+    // Back Light (warm highlight)
+    const backLight = new THREE.DirectionalLight(0xf59e0b, 0.5);
+    backLight.position.set(0, 5, -8);
+    scene.add(backLight);
+
+    // Materials
+    const baseColor = 0x27272a; // zinc-800
+    const highlightColor = 0xf59e0b; // amber-500
+
+    const createMaterial = () => new THREE.MeshStandardMaterial({ 
+        color: baseColor, 
+        roughness: 0.6, 
+        metalness: 0.2 
+    });
+
+    const parts = new THREE.Group();
+    
+    // Head -> Sphere
+    const headGeo = new THREE.SphereGeometry(0.5, 32, 32);
+    const head = new THREE.Mesh(headGeo, createMaterial());
+    head.position.y = 2.4;
+    head.userData = { name: 'Otro' }; // No obvious selection for Head yet
+    parts.add(head);
+
+    // Torso -> Box (smooth)
+    const torsoGeo = new THREE.BoxGeometry(1.4, 2.2, 0.7, 4, 4, 4);
+    // Smooth the box slightly
+    const torso = new THREE.Mesh(torsoGeo, createMaterial());
+    torso.position.y = 0.8;
+    torso.userData = { name: 'Pecho' }; 
+    parts.add(torso);
+
+    // Left Arm -> Capsule
+    const armGeo = new THREE.CapsuleGeometry(0.25, 1.8, 16, 16);
+    const leftArm = new THREE.Mesh(armGeo, createMaterial());
+    leftArm.position.set(1.1, 0.8, 0);
+    leftArm.rotation.z = -0.15;
+    leftArm.userData = { name: 'Brazo' };
+    parts.add(leftArm);
+
+    // Right Arm
+    const rightArm = new THREE.Mesh(armGeo, createMaterial());
+    rightArm.position.set(-1.1, 0.8, 0);
+    rightArm.rotation.z = 0.15;
+    rightArm.userData = { name: 'Brazo' };
+    parts.add(rightArm);
+
+    // Left Leg
+    const legGeo = new THREE.CapsuleGeometry(0.3, 2.2, 16, 16);
+    const leftLeg = new THREE.Mesh(legGeo, createMaterial());
+    leftLeg.position.set(0.4, -1.8, 0);
+    leftLeg.userData = { name: 'Pierna' };
+    parts.add(leftLeg);
+
+    // Right Leg
+    const rightLeg = new THREE.Mesh(legGeo, createMaterial());
+    rightLeg.position.set(-0.4, -1.8, 0);
+    rightLeg.userData = { name: 'Pierna' };
+    parts.add(rightLeg);
+
+    // Center the whole model a bit higher
+    parts.position.y = 0.5;
+    scene.add(parts);
+
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false;
+    controls.enableZoom = false; // keep it scaled properly
+    controls.minPolarAngle = Math.PI / 3;
+    controls.maxPolarAngle = Math.PI / 1.5;
+
+    // Raycaster
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hoveredMesh: THREE.Mesh | null = null;
+    let selectedMesh: THREE.Mesh | null = null;
+
+    const meshes = [head, torso, leftArm, rightArm, leftLeg, rightLeg];
+
+    function updateColors() {
+        meshes.forEach(mesh => {
+            const mat = mesh.material as THREE.MeshStandardMaterial;
+            if (mesh === selectedMesh) {
+                mat.color.setHex(highlightColor);
+                mat.emissive.setHex(highlightColor);
+                mat.emissiveIntensity = 0.2;
+            } else if (mesh === hoveredMesh) {
+                mat.color.setHex(highlightColor);
+                mat.emissive.setHex(0x000000);
+            } else {
+                mat.color.setHex(baseColor);
+                mat.emissive.setHex(0x000000);
+            }
+        });
+    }
+
+    // Interaction
+    function getPointerPosition(event: MouseEvent | TouchEvent) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        let clientX, clientY;
+        
+        if (event.type.includes('touch')) {
+            const touchEvent = event as TouchEvent;
+            clientX = touchEvent.touches[0].clientX;
+            clientY = touchEvent.touches[0].clientY;
+        } else {
+            const mouseEvent = event as MouseEvent;
+            clientX = mouseEvent.clientX;
+            clientY = mouseEvent.clientY;
+        }
+
+        mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    function onPointerMove(event: MouseEvent) {
+        getPointerPosition(event);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(meshes);
+
+        if (intersects.length > 0) {
+            hoveredMesh = intersects[0].object as THREE.Mesh;
+            container!.style.cursor = 'pointer';
+        } else {
+            hoveredMesh = null;
+            container!.style.cursor = 'grab';
+        }
+        updateColors();
+    }
+
+    function onClick(event: MouseEvent | TouchEvent) {
+        // Handle logic for determining back/front for torso dynamically
+        getPointerPosition(event);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(meshes);
+
+        if (intersects.length > 0) {
+            selectedMesh = intersects[0].object as THREE.Mesh;
+            let partName = selectedMesh.userData.name;
+            
+            // Intelligence for Torso: front vs back
+            if (selectedMesh === torso) {
+                // If viewing from behind, say it's 'Espalda', else 'Pecho'
+                const cameraAngle = Math.atan2(camera.position.x, camera.position.z);
+                const isBack = Math.abs(cameraAngle) > Math.PI / 2;
+                partName = isBack ? 'Espalda' : 'Pecho';
+            }
+            
+            // Dispatch event for Astro component to pick up
+            const selectionEvent = new CustomEvent('bodyPartSelected', { detail: { partName } });
+            window.dispatchEvent(selectionEvent);
+        } else {
+            selectedMesh = null;
+        }
+        updateColors();
+    }
+
+    renderer.domElement.addEventListener('mousemove', onPointerMove);
+    renderer.domElement.addEventListener('click', onClick);
+    renderer.domElement.addEventListener('touchstart', (e) => {
+        // On mobile, just select where they tap
+        onClick(e);
+    }, { passive: true });
+
+    // Handle Resize
+    window.addEventListener('resize', () => {
+        if (!container) return;
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // Sub to external updates to sync standard form dropdown -> 3D model
+    window.addEventListener('formBodyPartChanged', ((e: CustomEvent) => {
+        const part = e.detail.partName;
+        // Find matching mesh
+        if(part === 'Espalda' || part === 'Pecho') {
+            selectedMesh = torso;
+            // Optionally rotate camera
+            const targetZ = part === 'Espalda' ? -9 : 9;
+            camera.position.z = targetZ;
+        } else if(part === 'Brazo') {
+            selectedMesh = rightArm; // default select one
+        } else if(part === 'Pierna') {
+            selectedMesh = rightLeg;
+        } else {
+            selectedMesh = null;
+        }
+        updateColors();
+    }) as EventListener);
+
+    // Animation Loop
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        
+        // Idle gentle rotation if nothing selected
+        if (!selectedMesh && !hoveredMesh && !container?.matches(':hover')) {
+            parts.rotation.y += 0.005;
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    // Reveal canvas
+    if (loadingIndicator) loadingIndicator.style.display = 'none';
+    canvas.classList.remove('opacity-0');
+    
+    animate();
+  }
+</script>

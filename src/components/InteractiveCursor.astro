@@ -1,7 +1,9 @@
 ---
 ---
 
-<canvas id="cosmic-cursor" class="fixed inset-0 pointer-events-none z-[9999] opacity-70"></canvas>
+<canvas
+    id="cosmic-cursor"
+    class="fixed inset-0 pointer-events-none z-[9999] opacity-70"></canvas>
 
 <script>
     class Point {
@@ -13,10 +15,12 @@
         }
     }
 
-    const canvas = document.getElementById("cosmic-cursor") as HTMLCanvasElement;
+    const canvas = document.getElementById(
+        "cosmic-cursor"
+    ) as HTMLCanvasElement;
     if (canvas) {
         const ctx = canvas.getContext("2d");
-        
+
         let width = window.innerWidth;
         let height = window.innerHeight;
 
@@ -38,7 +42,7 @@
             target.y = e.clientY;
             cursorVisible = true;
         });
-        
+
         window.addEventListener("touchmove", (e: TouchEvent) => {
             if (e.touches.length > 0) {
                 target.x = e.touches[0].clientX;
@@ -46,15 +50,15 @@
                 cursorVisible = true;
             }
         });
-        
+
         window.addEventListener("mouseout", () => {
             cursorVisible = false;
         });
-        
+
         // Settings
         const spineLength = 25;
         const segmentLength = 6;
-        
+
         const spine: Point[] = [];
         for (let i = 0; i < spineLength; i++) {
             spine.push(new Point(width / 2, height / 2));
@@ -85,7 +89,7 @@
                 const current = spine[i];
                 const prev = spine[i - 1];
                 let a = angle(current, prev);
-                
+
                 // Pull 'current' towards 'prev' maintaining 'segmentLength'
                 current.x = prev.x - Math.cos(a) * segmentLength;
                 current.y = prev.y - Math.sin(a) * segmentLength;
@@ -94,7 +98,7 @@
 
         // Legs
         const legAttachNodes = [2, 6, 10, 14, 18];
-        
+
         class Leg {
             attachIndex: number;
             side: number;
@@ -116,20 +120,29 @@
 
             update(globalHeading: number) {
                 const attachPoint = spine[this.attachIndex];
-                
+
                 let localAngle = globalHeading;
                 if (this.attachIndex < spine.length - 1) {
-                    localAngle = angle(spine[this.attachIndex + 1], spine[this.attachIndex]);
+                    localAngle = angle(
+                        spine[this.attachIndex + 1],
+                        spine[this.attachIndex]
+                    );
                 }
 
                 // Desired foot placement relative to attach point
-                const standDist = 20; 
+                const standDist = 20;
                 const forwardOffset = 15;
-                
+
                 const perpAngle = localAngle + (Math.PI / 2) * this.side;
-                
-                this.targetFoot.x = attachPoint.x + Math.cos(perpAngle) * standDist + Math.cos(localAngle) * forwardOffset;
-                this.targetFoot.y = attachPoint.y + Math.sin(perpAngle) * standDist + Math.sin(localAngle) * forwardOffset;
+
+                this.targetFoot.x =
+                    attachPoint.x +
+                    Math.cos(perpAngle) * standDist +
+                    Math.cos(localAngle) * forwardOffset;
+                this.targetFoot.y =
+                    attachPoint.y +
+                    Math.sin(perpAngle) * standDist +
+                    Math.sin(localAngle) * forwardOffset;
 
                 // Step logic
                 const d = dist(this.foot, this.targetFoot);
@@ -147,40 +160,45 @@
                         this.stepProgress = 1;
                         this.stepping = false;
                     }
-                    
+
                     const t = this.stepProgress;
-                    this.foot.x = this.oldFoot.x + (this.targetFoot.x - this.oldFoot.x) * t;
-                    
+                    this.foot.x =
+                        this.oldFoot.x +
+                        (this.targetFoot.x - this.oldFoot.x) * t;
+
                     // Arc during step
                     const liftHeight = 15;
                     const arc = Math.sin(t * Math.PI) * liftHeight;
-                    // Usually we lift visually by going up (-y), but here we can just offset perpendicular 
-                    this.foot.y = this.oldFoot.y + (this.targetFoot.y - this.oldFoot.y) * t - arc; 
+                    // Usually we lift visually by going up (-y), but here we can just offset perpendicular
+                    this.foot.y =
+                        this.oldFoot.y +
+                        (this.targetFoot.y - this.oldFoot.y) * t -
+                        arc;
                 }
             }
-            
+
             draw() {
                 if (!ctx) return;
                 const attachPoint = spine[this.attachIndex];
-                
+
                 ctx.beginPath();
                 ctx.moveTo(attachPoint.x, attachPoint.y);
-                
+
                 // Knee joint
                 const midX = (attachPoint.x + this.foot.x) / 2;
                 const midY = (attachPoint.y + this.foot.y) / 2;
-                
+
                 const toFootAngle = angle(attachPoint, this.foot);
                 const jointOffset = 10 * this.side; // bend knee outwards
-                const jointAngle = toFootAngle + (Math.PI / 2);
-                
+                const jointAngle = toFootAngle + Math.PI / 2;
+
                 const jointX = midX + Math.cos(jointAngle) * jointOffset;
                 const jointY = midY + Math.sin(jointAngle) * jointOffset;
-                
+
                 ctx.lineTo(jointX, jointY);
                 ctx.lineTo(this.foot.x, this.foot.y);
                 ctx.stroke();
-                
+
                 // Paw
                 ctx.beginPath();
                 ctx.arc(this.foot.x, this.foot.y, 1.5, 0, Math.PI * 2);
@@ -189,7 +207,7 @@
         }
 
         const legs: Leg[] = [];
-        legAttachNodes.forEach(index => {
+        legAttachNodes.forEach((index) => {
             legs.push(new Leg(index, 1)); // Right
             legs.push(new Leg(index, -1)); // Left
         });
@@ -197,10 +215,10 @@
         // Loop
         function draw() {
             if (!ctx) return;
-            
+
             ctx.clearRect(0, 0, width, height);
             resolveIK();
-            
+
             const headHeading = angle(spine[1], spine[0]);
 
             // Styling: Amber theme
@@ -210,7 +228,7 @@
 
             // Update and draw legs
             // For natural movement, alternate steps if possible, but basic threshold works nicely
-            legs.forEach(leg => {
+            legs.forEach((leg) => {
                 leg.update(headHeading);
                 leg.draw();
             });
@@ -227,22 +245,25 @@
             for (let i = 0; i < spine.length; i++) {
                 const p = spine[i];
                 const size = Math.max(0.5, 3 - (i / spine.length) * 3);
-                
+
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
                 ctx.fill();
-                
+
                 // Ribs lines
                 if (i % 2 === 0 && i > 0 && i < spine.length - 2) {
-                    const a = i < spine.length - 1 ? angle(spine[i+1], spine[i]) : headHeading;
+                    const a =
+                        i < spine.length - 1
+                            ? angle(spine[i + 1], spine[i])
+                            : headHeading;
                     const ribLength = Math.max(1, 8 - (i / spine.length) * 8);
-                    
-                    const rx = p.x + Math.cos(a + Math.PI/2) * ribLength;
-                    const ry = p.y + Math.sin(a + Math.PI/2) * ribLength;
-                    
-                    const lx = p.x + Math.cos(a - Math.PI/2) * ribLength;
-                    const ly = p.y + Math.sin(a - Math.PI/2) * ribLength;
-                    
+
+                    const rx = p.x + Math.cos(a + Math.PI / 2) * ribLength;
+                    const ry = p.y + Math.sin(a + Math.PI / 2) * ribLength;
+
+                    const lx = p.x + Math.cos(a - Math.PI / 2) * ribLength;
+                    const ly = p.y + Math.sin(a - Math.PI / 2) * ribLength;
+
                     ctx.beginPath();
                     ctx.moveTo(lx, ly);
                     ctx.lineTo(rx, ry);
@@ -255,30 +276,34 @@
             ctx.arc(spine[0].x, spine[0].y, 4, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(245, 158, 11, 0.9)";
             ctx.fill();
-            
+
             // Antennae
             const antLength = 12;
             const antAngleSpread = 0.4;
-            
+
             // Right antenna
             ctx.beginPath();
             ctx.moveTo(spine[0].x, spine[0].y);
-            ctx.lineTo(spine[0].x + Math.cos(headHeading + antAngleSpread) * antLength, 
-                       spine[0].y + Math.sin(headHeading + antAngleSpread) * antLength);
+            ctx.lineTo(
+                spine[0].x + Math.cos(headHeading + antAngleSpread) * antLength,
+                spine[0].y + Math.sin(headHeading + antAngleSpread) * antLength
+            );
             ctx.stroke();
-            
+
             // Left antenna
             ctx.beginPath();
             ctx.moveTo(spine[0].x, spine[0].y);
-            ctx.lineTo(spine[0].x + Math.cos(headHeading - antAngleSpread) * antLength, 
-                       spine[0].y + Math.sin(headHeading - antAngleSpread) * antLength);
+            ctx.lineTo(
+                spine[0].x + Math.cos(headHeading - antAngleSpread) * antLength,
+                spine[0].y + Math.sin(headHeading - antAngleSpread) * antLength
+            );
             ctx.stroke();
 
             requestAnimationFrame(draw);
         }
 
         // initialize local positions
-        legs.forEach(leg => {
+        legs.forEach((leg) => {
             const attach = spine[leg.attachIndex];
             const perp = (Math.PI / 2) * leg.side; // dummy perp
             leg.foot.x = attach.x + Math.cos(perp) * 20;
