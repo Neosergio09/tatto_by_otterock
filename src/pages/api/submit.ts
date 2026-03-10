@@ -110,6 +110,18 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (dbError) {
       console.error("Supabase DB Insert Error:", dbError);
+      
+      // Handle PGRST204 Schema Cache error specifically
+      if (dbError.code === 'PGRST204') {
+        return new Response(
+          JSON.stringify({ 
+            error: 'La base de datos se está actualizando (Schema Cache). Por favor, intenta de nuevo en unos segundos.', 
+            details: dbError.message 
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
       throw new Error(`Error de Base de Datos al guardar la consulta: ${dbError.message}`);
     }
 
