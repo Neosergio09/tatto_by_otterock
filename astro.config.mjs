@@ -11,6 +11,9 @@ export default defineConfig({
     image: {
         domains: ['images.unsplash.com']
     },
+    security: {
+        checkOrigin: false
+    },
     vite: {
         plugins: [tailwind()],
         build: {
