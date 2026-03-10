@@ -9,6 +9,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase configuration. URL:", !!supabaseUrl, "KEY:", !!supabaseKey);
+      throw new Error("Missing Supabase configuration");
+    }
+
     let formData;
     try {
       formData = await request.formData();
@@ -28,6 +33,7 @@ export const POST: APIRoute = async ({ request }) => {
     const size_cm = parseFloat(formData.get('size_cm')?.toString() || '0');
     const style = formData.get('style')?.toString();
     const description = formData.get('description')?.toString();
+    const image = formData.get('image') as File | null;
 
     if (!name || !email || !whatsapp || !description) {
       return new Response(
@@ -36,7 +42,38 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const { error } = await supabase
+    let reference_url = null;
+
+    // Handle Image upload if present
+    if (image && image.size > 0 && image.name) {
+      try {
+        const fileExt = image.name.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `references/${fileName}`;
+
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('tattoo-references') // Ensure this bucket exists in Supabase!
+          .upload(filePath, image);
+
+        if (uploadError) {
+          console.error("Supabase Storage Error:", uploadError);
+          throw new Error(`Error subiendo la imagen al bucket 'tattoo-references': ${uploadError.message}`);
+        }
+
+        if (uploadData) {
+          const { data } = supabase.storage
+            .from('tattoo-references')
+            .getPublicUrl(filePath);
+          reference_url = data.publicUrl;
+        }
+      } catch (storageErr) {
+        console.error("Storage Exception:", storageErr);
+        // We log it but might still try to save the consultation data without the image (or throw here to short-circuit)
+        throw storageErr;
+      }
+    }
+
+    const { error: dbError } = await supabase
       .from('consultations')
       .insert([
         { 
@@ -46,26 +83,24 @@ export const POST: APIRoute = async ({ request }) => {
           body_part, 
           size_cm, 
           style, 
-          description 
+          description,
+          reference_url
         }
       ]);
 
-    if (error) {
-      console.error("Supabase Error:", error);
-      return new Response(
-        JSON.stringify({ error: 'Error al guardar la consulta.' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (dbError) {
+      console.error("Supabase DB Insert Error:", dbError);
+      throw new Error(`Error de Base de Datos al guardar la consulta: ${dbError.message}`);
     }
 
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
-  } catch (err) {
-    console.error("Server Error:", err);
+  } catch (err: any) {
+    console.error("General Server Error en Vercel:", err);
     return new Response(
-      JSON.stringify({ error: 'Error interno del servidor.' }),
+      JSON.stringify({ error: 'Error interno del servidor. Revisa los logs de Vercel para más info.', details: err.message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
