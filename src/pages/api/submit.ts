@@ -57,28 +57,26 @@ export const POST: APIRoute = async ({ request }) => {
     const description = formData.get('description')?.toString();
     const image = formData.get('image') as File | null;
 
-    if (!name || !email || !whatsapp || !description || !body_part || !style) {
+    if (!profile_id || !name || !email || !whatsapp || !description || !body_part || !style) {
       return new Response(
         JSON.stringify({ error: 'Faltan campos requeridos en el payload.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    let validProfileId = undefined;
+    // Validate if profile exists
+    const { data: profileCheck, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', profile_id)
+      .single();
 
-    // Graceful check for profile_id for backward compatibility
-    if (profile_id) {
-      const { data: profileCheck, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', profile_id)
-        .single();
-      
-      if (profileCheck) {
-        validProfileId = profileCheck.id;
-      } else {
-        console.warn("⚠️ Profile check failed (table might not exist in production yet). Proceeding gracefully.", profileError);
-      }
+    if (profileError || !profileCheck) {
+      console.error("Invalid Profile ID:", profile_id, profileError);
+      return new Response(
+        JSON.stringify({ error: 'El profile_id provisto no es válido o no existe.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     let reference_url = null;
@@ -111,26 +109,21 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    const insertPayload: any = { 
-      name, 
-      email, 
-      whatsapp, 
-      body_part, 
-      size_cm, 
-      style, 
-      description,
-      reference_url
-    };
-
-    // Only inject profile_id if we successfully validated it exists in the database
-    // This prevents crashing production if the 'profile_id' column doesn't exist yet
-    if (validProfileId) {
-      insertPayload.profile_id = validProfileId;
-    }
-
     const { error: dbError } = await supabase
       .from('consultations')
-      .insert([insertPayload]);
+      .insert([
+        { 
+          name, 
+          email, 
+          whatsapp, 
+          body_part, 
+          size_cm, 
+          style, 
+          description,
+          reference_url,
+          profile_id
+        }
+      ]);
 
     if (dbError) {
       console.error("Supabase DB Insert Error:", dbError);
