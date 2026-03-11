@@ -14,25 +14,28 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH T
 
 -- Add profile_id to consultations
 -- First, add the column
-ALTER TABLE public.consultations ADD COLUMN profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.consultations ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 -- Enable RLS on profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Profiles Policies
 -- Public can view profiles
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON public.profiles;
 CREATE POLICY "Profiles are viewable by everyone" 
 ON public.profiles FOR SELECT 
 TO public 
 USING (true);
 
 -- Users can insert their own profile
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile" 
 ON public.profiles FOR INSERT 
 TO authenticated 
 WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" 
 ON public.profiles FOR UPDATE 
 TO authenticated 
@@ -42,6 +45,7 @@ WITH CHECK (auth.uid() = id);
 -- Update Consultations Policies
 -- Drop existing public insert policy to recreate it with profile validation
 DROP POLICY IF EXISTS "Allow public submissions" ON public.consultations;
+DROP POLICY IF EXISTS "Allow public submissions to specific profiles" ON public.consultations;
 
 -- Allow public to insert consultations, but only for valid profiles
 CREATE POLICY "Allow public submissions to specific profiles" 
@@ -50,6 +54,7 @@ TO public
 WITH CHECK (profile_id IS NOT NULL);
 
 -- Artists can view only their own consultations
+DROP POLICY IF EXISTS "Artists can view their own consultations" ON public.consultations;
 CREATE POLICY "Artists can view their own consultations" 
 ON public.consultations FOR SELECT 
 TO authenticated 
