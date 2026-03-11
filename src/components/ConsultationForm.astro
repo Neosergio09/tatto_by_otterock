@@ -2,8 +2,11 @@
 import { Phone, Maximize, Palette, User, Mail, PenTool } from 'lucide-astro';
 import BodyPicker3D from './BodyPicker3D.astro';
 
-// ConsultationForm component
-// Client-side interactions will map to /api/submit
+export interface Props {
+    profileId?: string;
+}
+
+const { profileId = '11111111-1111-1111-1111-111111111111' } = Astro.props;
 ---
 
 <div class="space-y-4 rounded-xl border border-amber-500/20 bg-zinc-900/50 backdrop-blur-md p-6 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
@@ -16,6 +19,7 @@ import BodyPicker3D from './BodyPicker3D.astro';
         </p>
     </div>
     <form class="space-y-5" id="consultation-form">
+        <input type="hidden" name="profile_id" value={profileId} />
         <!-- Nombre -->
         <div>
             <label class="block text-sm font-medium text-amber-200/80 mb-1.5 ml-1">Nombre Completo</label>
@@ -147,6 +151,8 @@ import BodyPicker3D from './BodyPicker3D.astro';
 </div>
 
 <script>
+    import { submitConsultation, OtterockMannequinState } from '../lib/otterock-client';
+
     const form = document.getElementById('consultation-form') as HTMLFormElement;
     const submitBtn = form?.querySelector('button[type="submit"]');
     const submitText = form?.querySelector('.submit-text');
@@ -155,13 +161,12 @@ import BodyPicker3D from './BodyPicker3D.astro';
 
     const bodyPartSelect = document.getElementById('body-part-select') as HTMLSelectElement;
     if (bodyPartSelect) {
-        window.addEventListener('bodyPartSelected', ((e: CustomEvent) => {
-            bodyPartSelect.value = e.detail.partName;
-        }) as EventListener);
+        OtterockMannequinState.listenForSelection((partName) => {
+            bodyPartSelect.value = partName;
+        });
         
         bodyPartSelect.addEventListener('change', (e) => {
-            const event = new CustomEvent('formBodyPartChanged', { detail: { partName: (e.target as HTMLSelectElement).value } });
-            window.dispatchEvent(event);
+            OtterockMannequinState.selectBodyPart((e.target as HTMLSelectElement).value);
         });
     }
 
@@ -179,14 +184,23 @@ import BodyPicker3D from './BodyPicker3D.astro';
 
             try {
                 const formData = new FormData(form);
-                const response = await fetch('/api/submit', {
-                    method: 'POST',
-                    body: formData,
-                });
+                
+                // Map FormData back to ConsultationPayload for SDK
+                const payload = {
+                    profile_id: formData.get('profile_id') as string,
+                    name: formData.get('name') as string,
+                    email: formData.get('email') as string,
+                    whatsapp: formData.get('whatsapp') as string,
+                    body_part: formData.get('body_part') as string,
+                    size_cm: parseFloat((formData.get('size_cm') || '0') as string),
+                    style: formData.get('style') as string,
+                    description: formData.get('description') as string,
+                    image: formData.get('image') as File | null
+                };
 
-                const result = await response.json();
+                const result = await submitConsultation('/api/submit', payload);
 
-                if (response.ok) {
+                if (result.success) {
                     form.reset();
                     formMessage.textContent = '¡Solicitud enviada con éxito! Nos comunicaremos pronto.';
                     formMessage.className = 'block rounded-md p-3 text-sm text-center bg-green-900/40 text-green-400 border border-green-800/50 mt-4';

@@ -47,6 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     // Extract fields
+    const profile_id = formData.get('profile_id')?.toString();
     const name = formData.get('name')?.toString();
     const email = formData.get('email')?.toString();
     const whatsapp = formData.get('whatsapp')?.toString();
@@ -56,11 +57,28 @@ export const POST: APIRoute = async ({ request }) => {
     const description = formData.get('description')?.toString();
     const image = formData.get('image') as File | null;
 
-    if (!name || !email || !whatsapp || !description) {
+    if (!name || !email || !whatsapp || !description || !body_part || !style) {
       return new Response(
-        JSON.stringify({ error: 'Faltan campos requeridos.' }),
+        JSON.stringify({ error: 'Faltan campos requeridos en el payload.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
+    }
+
+    let validProfileId = undefined;
+
+    // Graceful check for profile_id for backward compatibility
+    if (profile_id) {
+      const { data: profileCheck, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', profile_id)
+        .single();
+      
+      if (profileCheck) {
+        validProfileId = profileCheck.id;
+      } else {
+        console.warn("⚠️ Profile check failed (table might not exist in production yet). Proceeding gracefully.", profileError);
+      }
     }
 
     let reference_url = null;
@@ -93,20 +111,26 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
+    const insertPayload: any = { 
+      name, 
+      email, 
+      whatsapp, 
+      body_part, 
+      size_cm, 
+      style, 
+      description,
+      reference_url
+    };
+
+    // Only inject profile_id if we successfully validated it exists in the database
+    // This prevents crashing production if the 'profile_id' column doesn't exist yet
+    if (validProfileId) {
+      insertPayload.profile_id = validProfileId;
+    }
+
     const { error: dbError } = await supabase
       .from('consultations')
-      .insert([
-        { 
-          name, 
-          email, 
-          whatsapp, 
-          body_part, 
-          size_cm, 
-          style, 
-          description,
-          reference_url
-        }
-      ]);
+      .insert([insertPayload]);
 
     if (dbError) {
       console.error("Supabase DB Insert Error:", dbError);
